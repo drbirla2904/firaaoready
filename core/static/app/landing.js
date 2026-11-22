@@ -59,7 +59,7 @@
           h('button.btn.lg' + (best ? '.gold' : ''), { onclick: toStart }, t('Start free trial')));
       })))) : null;
     return h('div.land',
-      h('div.navbar', h('a.logo', { href: '/app/', style: 'padding:0' }, h('i', '↻'), 'Firaao'), h('div.grow'),
+      h('div.navbar', h('a.logo', { href: '/app/', style: 'padding:0' }, h('img', { src: '/icon.svg', alt: '' }), 'Firaao'), h('div.grow'),
         h('a.l', { href: '#how', onclick: jump('how') }, t('How it works')), h('a.l', { href: '#features', onclick: jump('features') }, t('Features')),
         plans ? h('a.l', { href: '#pricing', onclick: jump('pricing') }, t('Pricing')) : null, h('a.l', { href: '#faq', onclick: jump('faq') }, t('FAQ')),
         h('button.btn.ghost.sm', { onclick: () => { FX.setLang(FX.lang === 'hi' ? 'en' : 'hi'); FX.start(true); } }, FX.lang === 'hi' ? 'English' : 'हिन्दी'),

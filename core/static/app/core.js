@@ -286,9 +286,9 @@
     const root = $('#root');
     const shopSwitch = S.role === 'owner' && S.shops.length > 1 ? sel(S.shops.map(s => [s.shop_code, s.name]), S.biz && S.biz.shop_code, { 'aria-label': t('Switch shop'), onchange: e => { localStorage.fx_biz = e.target.value; S.biz = S.shops.find(s => s.shop_code === e.target.value); FX.render(); } }) : null;
     root.replaceChildren(h('div.app',
-      h('aside.side', h('a.logo', { href: '#/' }, h('i', '↻'), 'Firaao'), h('nav', { style: 'display:grid;gap:2px' }), h('div.grow'),
+      h('aside.side', h('a.logo', { href: '#/' }, h('img', { src: '/icon.svg', alt: '' }), 'Firaao'), h('nav', { style: 'display:grid;gap:2px' }), h('div.grow'),
         h('button.nav', { onclick: FX.signOut }, ico('out'), t('Log out'))),
-      h('div', h('header.top', h('a.logo', { href: '#/' }, h('i', '↻'), 'Firaao'), shopSwitch, h('div.grow'),
+      h('div', h('header.top', h('a.logo', { href: '#/' }, h('img', { src: '/icon.svg', alt: '' }), 'Firaao'), shopSwitch, h('div.grow'),
         h('button.btn.ghost.sm', { onclick: () => { FX.setLang(FX.lang === 'hi' ? 'en' : 'hi'); FX.start(true); } }, FX.lang === 'hi' ? 'English' : 'हिन्दी'),
         h('button.iconbtn', { 'aria-label': t('Text size'), onclick: FX.cycleTextSize, style: 'font-weight:800;font-size:calc(13px * var(--font-scale, .8))' }, 'Aa'),
         h('button.iconbtn', { 'aria-label': t('Notifications'), onclick: FX.inbox }, ico('bell'), h('span.dot#bellDot', { hidden: true }))),
@@ -403,7 +403,7 @@
     if (vref) localStorage.ref = vref;
     let mode = o.mode || (vref ? 'register' : 'login'), role = o.role || (vref ? 'owner' : 'customer');
     const box = h('div.form');
-    const wrap = h('div.auth', h('section.hero', h('a.logo', { href: '/app/', style: 'color:#fff' }, h('i', { style: 'background:#fff;color:#0a4a40' }, '↻'), 'Firaao'),
+    const wrap = h('div.auth', h('section.hero', h('a.logo', { href: '/app/', style: 'color:#fff' }, h('img', { src: '/icon.svg', alt: '' }), 'Firaao'),
       h('h1', t('Give customers a reason to come back.')),
       h('p', t('Stamp cards, rewards and bookings for local shops, salons and studios. Customers scan a QR code. No app to install.')),
       h('div.demo-card', h('div.row.between', h('b', 'Chai Point'), h('span.pill.gold', t('Gold'))), h('div.stamps', [1, 2, 3, 4, 5, 6].map(i => h('div.stamp' + (i <= 4 ? '.on' : '') + (i === 6 ? '.gift' : ''), i <= 4 ? h('span', '✓') : i === 6 ? h('span', '🎁') : null))), h('small', t('2 more visits for a free chai')))), box);
@@ -445,12 +445,12 @@
   FX.routes.customer.account = FX.routes.owner.account = FX.routes.staff.account = FX.routes.vendor.account = async function () {
     const me = S.user || await api('me/profile/');
     const name = inp({ value: me.name, maxlength: 150 });
-    let img = null; if (S.role === 'customer') img = (await api('me/profile-image/')).profile_image_url;
+    const img = (await api('me/profile-image/')).profile_image_url;
     const hidden = S.role === 'customer' ? await api('me/shops/hidden/') : [];
     const old = inp({ type: 'password', autocomplete: 'current-password' }), nw = inp({ type: 'password', autocomplete: 'new-password' });
-    const photo = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async e => { const f = e.target.files[0]; if (!f) return; const fd = new FormData(); fd.append('profile_image', f); try { await api('me/profile-image/', 'POST', fd); toast(t('Photo updated')); FX.render(true); } catch (x) { toast(x.message, true); } } });
+    const photo = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async e => { const f = e.target.files[0]; if (!f) return; e.target.value = ''; const fd = new FormData(); fd.append('profile_image', f); try { await api('me/profile-image/', 'PATCH', fd); toast(t('Photo updated')); FX.render(true); } catch (x) { toast(x.message, true); } } });
     return h('div.stack.l', h('h1', t('Account')),
-      h('div.card.stack', h('div.row', avatar(me.name, img), h('div.grow', h('b', me.name || t('Add your name')), h('div.muted.small', me.mobile)), S.role === 'customer' ? [h('button.btn.ghost.sm', { onclick: () => photo.click() }, t('Change photo')), photo] : null),
+      h('div.card.stack', h('div.row', avatar(me.name, img), h('div.grow', h('b', me.name || t('Add your name')), h('div.muted.small', me.mobile)), h('button.btn.ghost.sm', { onclick: () => photo.click() }, t('Change photo')), photo),
         field('Name', name), h('button.btn', { onclick: e => busy(e.target, async () => { await api('me/profile/', 'PATCH', { name: name.value }); S.user = null; toast(t('Saved')); }) }, t('Save name'))),
       h('div.card.stack', h('h3', t('Language')), h('div.seg', ['en', 'hi'].map(l => h('button', { 'aria-selected': String(FX.lang === l), onclick: () => { FX.setLang(l); FX.start(true); } }, l === 'en' ? 'English' : 'हिन्दी')))),
       h('div.card.stack', h('h3', t('Change password')), field('Current password', old), field('New password', nw), h('button.btn.ghost', { onclick: e => busy(e.target, async () => { await api('auth/change-password/', 'POST', { old: old.value, new: nw.value }); old.value = nw.value = ''; toast(t('Password changed.')); }) }, t('Update password'))),

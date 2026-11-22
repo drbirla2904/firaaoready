@@ -22,7 +22,7 @@ CATEGORY_THEMES = {
 }
 
 
-ASSET_VERSION = "2.3.7"  # bump on every frontend release: busts the service-worker + browser cache for /static/app/*
+ASSET_VERSION = "2.3.9"  # bump on every frontend release: busts the service-worker + browser cache for /static/app/*
 
 
 def shell(request, code=None):
@@ -42,7 +42,10 @@ def shell(request, code=None):
 
 def classic(request):
     """The previous single-file UI, kept one release as a fallback (/app/classic/)."""
-    return HttpResponse((WEB / "app_classic.html").read_text(encoding="utf-8"), content_type="text/html")
+    html = (WEB / "app_classic.html").read_text(encoding="utf-8")
+    html = html.replace("</style>", '.brand-mark{background:url("/icon.svg") center/cover no-repeat}.brand-mark svg{display:none}</style>', 1)
+    html = html.replace("</body>", f'<script src="/static/app/install.js?v={ASSET_VERSION}"></script></body>')
+    return HttpResponse(html, content_type="text/html")
 
 
 def print_card(request, code):

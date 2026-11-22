@@ -36,7 +36,7 @@ img{max-width:100%}
 .app{min-height:100vh;display:grid;grid-template-columns:var(--side) minmax(0,1fr)}
 .side{position:sticky;top:0;height:100vh;padding:20px 14px;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:4px;overflow:auto}
 .logo{display:flex;align-items:center;gap:10px;padding:2px 8px 18px;font-family:var(--f-d);font-weight:700;font-size:calc(19px * var(--font-scale, .8));color:var(--ink);text-decoration:none}
-.logo i{width:32px;height:32px;border-radius:10px;background:var(--brand);color:#fff;display:grid;place-items:center;font-style:normal;font-size:calc(17px * var(--font-scale, .8))}
+.logo img{width:32px;height:32px;border-radius:10px;object-fit:cover;flex:none}
 .nav{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--r1);color:var(--ink2);text-decoration:none;font-weight:500;border:0;background:none;width:100%;text-align:left;cursor:pointer;position:relative}
 .nav svg{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .nav:hover{background:var(--bg)}.nav[aria-current=page]{background:var(--brand-s);color:var(--brand-d);font-weight:600}
@@ -431,14 +431,14 @@ b,strong{font-weight:650}
 
 /* ---- header: violet bar, white controls ---- */
 .top{background:var(--grad);color:#fff;border-bottom:0;box-shadow:0 8px 24px -14px #3f2380aa;backdrop-filter:none;min-height:60px}
-.top .logo{color:#fff}.top .logo i,.logo i{background:#fff;color:var(--brand);font-style:normal;font-weight:800}
+.top .logo{color:#fff}
 .top .iconbtn{background:#ffffff26;border-color:transparent;color:#fff}
 .top .iconbtn:hover{background:#ffffff40}
 .top .btn.ghost{background:#ffffff26;border-color:transparent;color:#fff;box-shadow:none}
 .top select{background:#ffffff26;border-color:transparent;color:#fff;font-weight:600}.top select option{color:#1c1530}
 .top .dot{background:var(--gold);color:#3b2600}
 .logo{font-family:var(--f-d);font-weight:800;letter-spacing:-.02em}
-.logo i{display:grid;place-items:center;width:30px;height:30px;border-radius:10px}
+.logo img{width:30px;height:30px;border-radius:10px}
 
 /* ---- navigation ---- */
 .side{background:#fff;border-right:1px solid var(--line)}
@@ -524,3 +524,16 @@ dialog{border-radius:24px}
 /* long button labels wrap instead of pushing the page sideways on small phones */
 .btn{max-width:100%;white-space:normal;text-align:center;line-height:1.25}
 body{font-size:calc(15px * var(--font-scale,.8))}
+
+/* ---------- mobile app install prompt ---------- */
+.install-prompt{position:fixed;z-index:60;left:12px;right:12px;bottom:calc(var(--tabs, 62px) + 10px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 10px 32px #17251d24}
+.install-prompt[hidden]{display:none}
+.install-prompt-mark{width:38px;height:38px;flex:none;display:grid;place-items:center;border-radius:12px;background:var(--brand);color:#fff;font-weight:800}
+.install-prompt-copy{flex:1;min-width:0}
+.install-prompt-copy strong{display:block;font-size:14px}
+.install-prompt-copy p{color:var(--mute);font-size:12px;line-height:1.35}
+.install-prompt-copy .install-prompt-help{margin-top:4px;color:var(--ink2)}
+.install-prompt-action,.install-prompt-close{min-height:40px;border:0;border-radius:10px;cursor:pointer}
+.install-prompt-action{padding:7px 12px;background:var(--brand);color:#fff;font-weight:650}
+.install-prompt-close{width:34px;flex:none;background:transparent;color:var(--mute);font-size:22px}
+@media(min-width:861px){.install-prompt{display:none!important}}

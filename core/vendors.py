@@ -40,8 +40,8 @@ def _upi_ids(user):
 
 def accrue(p):
     """Called when a payment is marked paid. Never on trials; single level; idempotent."""
-    v = p.owner.referred_by
-    if not v or v.status != "approved" or v.user_id == p.owner_id:
+    v = Vendor.objects.filter(pk=p.owner.referred_by_id, status="approved").select_related("user").first()
+    if not v or v.user_id == p.owner_id:
         return
     # self-referral guard: the partner's payout UPI or any of the partner's own shop UPIs must not match the payer's
     mine = {v.upi_id.strip().lower()} | _upi_ids(v.user)

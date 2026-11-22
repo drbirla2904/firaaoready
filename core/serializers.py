@@ -90,7 +90,7 @@ class EntrySerializer(serializers.ModelSerializer):
                   "task_type", "value", "status", "created_at", "reviewed_at", "far", "distance_m", "bill_url"]
 
 
-class CustomerProfileImageSerializer(serializers.Serializer):
+class ProfileImageSerializer(serializers.Serializer):
     profile_image = serializers.ImageField()
 
     def validate_profile_image(self, image):

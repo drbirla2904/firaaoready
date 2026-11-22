@@ -119,6 +119,26 @@ class CustomerProfilePhotoTest(APITestCase):
         )
         self.assertEqual(too_large.status_code, 400)
 
+    def test_all_account_roles_can_upload_and_retrieve_profile_photos(self):
+        users = [
+            self.customer,
+            self.owner,
+            User.objects.create_user("9000000103", "secret1", role="staff"),
+            User.objects.create_user("9000000104", "secret1", role="vendor"),
+        ]
+        for user in users:
+            with self.subTest(role=user.role):
+                self.client.force_authenticate(user)
+                uploaded = self.client.patch(
+                    "/api/me/profile-image/",
+                    {"profile_image": self._photo()},
+                    format="multipart",
+                )
+                self.assertEqual(uploaded.status_code, 200, uploaded.data)
+                self.assertTrue(uploaded.data["profile_image_url"].startswith("/media/profiles/"))
+                fetched = self.client.get("/api/me/profile-image/")
+                self.assertEqual(fetched.data["profile_image_url"], uploaded.data["profile_image_url"])
+
 
 class CustomerShopVisibilityTest(APITestCase):
     def setUp(self):
@@ -944,8 +964,10 @@ class LifecycleLegalTest(APITestCase):
         self.assertContains(app, 'href="/shipping-delivery/"')
         self.assertContains(app, "viewport-fit=cover")
         self.assertContains(app, "/static/app/core.js")  # v2 shell loads the modular frontend
+        self.assertContains(app, "/static/app/install.js")
         classic = self.client.get("/app/classic/")  # previous single-file UI kept as a fallback
         self.assertContains(classic, "viewport-fit=cover")
+        self.assertContains(classic, "/static/app/install.js")
         self.assertContains(classic, "[hidden]{display:none!important}")
         self.assertContains(classic, ".topbar{position:sticky;top:0;z-index:33")
         self.assertContains(classic, ".sidebar{z-index:31")

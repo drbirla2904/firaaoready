@@ -17,7 +17,7 @@ from django.db.models import Q
 from .models import (AuditLog, Business, CustomerProfile, OtpCode, Payment, Program, PurchaseEntry, Reward, RewardGrant,
                      Subscription, Task, TaskProgress, User, Vendor)
 from .notify import notify, push
-from .serializers import BusinessSerializer, CustomerProfileImageSerializer, EntrySerializer
+from .serializers import BusinessSerializer, EntrySerializer, ProfileImageSerializer
 
 
 @api_view(["PATCH"])
@@ -256,8 +256,6 @@ def delete_me(request):
 
 @api_view(["GET", "PATCH", "DELETE"])
 def profile_image(request):
-    if request.user.role != "customer":
-        raise PermissionDenied("Customer account required.")
     user = request.user
     if request.method == "GET":
         return Response({"profile_image_url": user.profile_image.url if user.profile_image else ""})
@@ -267,7 +265,7 @@ def profile_image(request):
             user.profile_image = ""
             user.save(update_fields=["profile_image"])
         return Response({"profile_image_url": ""})
-    serializer = CustomerProfileImageSerializer(data=request.data)
+    serializer = ProfileImageSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     previous_name = user.profile_image.name
     user.profile_image = serializer.validated_data["profile_image"]
