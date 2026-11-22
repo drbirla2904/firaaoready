@@ -1,0 +1,7 @@
+{% extends "legal/base.html" %}{% block title %}Contact us{% endblock %}{% block body %}
+<h1>Contact us</h1>
+<p><b>{{ c.name }}</b><br>{{ c.address }}<br>Email: <a href="mailto:{{ c.email }}">{{ c.email }}</a>{% if c.phone %}<br>Phone / WhatsApp: {{ c.phone }}{% endif %}</p>
+<p>For subscription activation, payment, or account support, contact us at the details above and include your registered mobile number and payment reference. Please do not send card details, passwords, or OTPs.</p>
+<h2>Grievance Officer</h2><p>{{ c.grievance_name }}<br>Email: <a href="mailto:{{ c.grievance_email }}">{{ c.grievance_email }}</a><br>We acknowledge complaints within 7 days and aim to resolve them within 30 days.</p>
+<p>See the <a href="/about/">About page</a>, <a href="/pricing/">Pricing</a>, <a href="/shipping-delivery/">Service Delivery Policy</a> and <a href="/refund/">Refund &amp; Cancellation Policy</a> for more information.</p>
+{% endblock %}

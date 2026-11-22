@@ -1,0 +1,92 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ b.name }} – Firaao rewards QR</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap">
+<style>
+@page{size:{{ page }};margin:0}
+*{box-sizing:border-box}
+body{margin:0;background:#f5f2fa;color:#1c1530;font-family:Inter,"Noto Sans Devanagari",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.panel{--accent:{% if bw %}#111{% else %}{{ theme.accent }}{% endif %};--soft:{% if bw %}#fff{% else %}{{ theme.soft }}{% endif %};
+ position:relative;overflow:hidden;width:{% if size == 'a6' %}105mm;height:148mm{% elif size == 'a5' %}148mm;height:210mm{% elif tent %}210mm;height:148.5mm{% else %}210mm;height:297mm{% endif %};
+ margin:0 auto;padding:{% if size == 'a6' %}4mm{% elif tent %}5mm{% else %}7mm{% endif %};display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+ background:#fff;color:#1c1530;border-bottom:{% if tent %}1px dashed #b9b0d0{% else %}0{% endif %}}
+.rot{transform:rotate(180deg)}
+.panel:before{content:"";position:absolute;top:0;left:0;right:0;height:3.5mm;background:var(--accent)}
+.panel:after{content:"Firaao";position:absolute;bottom:2.2mm;left:0;right:0;font-size:6.5pt;font-weight:700;letter-spacing:.6px;color:#9a93b3}
+.brand{display:flex;flex:0 0 auto;align-items:center;gap:2mm;margin-bottom:1.5mm;color:#1c1530;font-size:11pt;font-weight:800;letter-spacing:-.3px}
+.brand-mark{display:grid;width:8mm;height:8mm;place-items:center;border:.3mm solid {% if bw %}#111{% else %}#d9cdf0{% endif %};border-radius:2.5mm;background:{% if bw %}#fff{% else %}linear-gradient(145deg,#f1eafb,#d3c1f2){% endif %}}
+.brand-mark svg{display:block;width:6.5mm;height:6.5mm}
+.category{display:flex;flex:0 0 auto;align-items:center;gap:1.5mm;margin:0 0 1.5mm;padding:1mm 2mm;border:0;border-radius:20mm;background:var(--soft);color:var(--accent);font-size:8pt;font-weight:750;letter-spacing:.25px}
+.category-icon{width:6mm;height:6mm;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.category-art{display:grid;flex:0 0 auto;width:{% if size == 'a6' %}48mm{% elif tent %}55mm{% else %}64mm{% endif %};height:{% if size == 'a6' %}15mm{% elif tent %}17mm{% else %}20mm{% endif %};margin:0 0 1.5mm;place-items:center;overflow:hidden;border:1px solid var(--soft);border-radius:5mm;background:linear-gradient(135deg,#fff,var(--soft));color:var(--accent)}
+.category-art svg{display:block;width:94%;height:90%;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.category-art .art-fill{fill:var(--soft);stroke:currentColor}
+.category-art .art-detail{stroke-width:2}
+.category-art .salon-hair-stroke{stroke-width:2.6}
+h1{flex:0 0 auto;max-width:100%;margin:0 0 1mm;color:#1c1530;font-size:{% if size == 'a6' %}18pt{% else %}32pt{% endif %};line-height:1.08;letter-spacing:-.7px;overflow-wrap:anywhere}
+.tag{flex:0 0 auto;max-width:90%;margin:0 0 1.5mm;color:#6b6485;font-size:9pt;line-height:1.2}
+.qr-frame{position:relative;flex:0 0 auto;padding:1.5mm;border:1px solid #e7e2f1;border-radius:4mm;background:#fff}
+.qr-frame:before,.qr-frame:after{position:absolute;width:7mm;height:7mm;border-color:var(--accent);border-style:solid;content:""}
+.qr-frame:before{top:-1mm;left:-1mm;border-width:1mm 0 0 1mm;border-radius:2mm 0 0}
+.qr-frame:after{right:-1mm;bottom:-1mm;border-width:0 1mm 1mm 0;border-radius:0 0 2mm}
+.qr{padding:0;background:#fff}
+.qr svg{display:block;width:{% if size == 'a6' %}48mm{% elif tent %}60mm{% else %}94mm{% endif %};height:auto;max-width:100%}
+.cta{flex:0 0 auto;margin-top:2mm;padding:1.6mm 5mm;border-radius:20mm;white-space:nowrap;background:var(--accent);color:#fff;font-size:{% if size == 'a6' %}11pt{% else %}17pt{% endif %};font-weight:800;letter-spacing:-.35px;line-height:1.15}
+.cta-note{flex:0 0 auto;margin:0;color:#6b6485;font-size:7.5pt;line-height:1.2}
+.meta{flex:0 1 auto;max-width:90%;margin-top:1mm;color:#6b6485;font-size:7.5pt;line-height:1.2;overflow-wrap:anywhere}
+.meta span{display:inline-block;margin:0 1mm}
+.btn{position:fixed;z-index:5;top:14px;right:14px;padding:11px 20px;border:0;border-radius:11px;background:#5e35b1;color:#fff;font-size:14px;font-weight:680;box-shadow:0 4px 14px #5e35b133;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease}
+.btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px #5e35b140}
+@media print{body{background:#fff}.btn{display:none}.panel{margin:0}.qr-frame:before,.qr-frame:after{display:none}}
+</style></head><body>
+<button class="btn" onclick="window.print()">Print</button>
+{% for i in panels %}<div class="panel{% if tent and forloop.first %} rot{% endif %}">
+<div class="brand"><span class="brand-mark"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M13 29V17a6 6 0 0 1 11-3M13 20h13" stroke="{% if bw %}#111{% else %}#3f2380{% endif %}" stroke-width="3.2" stroke-linecap="round"/><circle cx="27.5" cy="12.5" r="3" fill="#fff" stroke="{% if bw %}#111{% else %}#1b7651{% endif %}" stroke-width="1.5"/><path d="m27.5 8 .8-1.6M32 12.5l1.6-.6M27.5 17l.8 1.6" stroke="{% if bw %}#111{% else %}#1b7651{% endif %}" stroke-width="1.5" stroke-linecap="round"/></svg></span><span>Firaao</span></div>
+<div class="category-art" role="img" aria-label="{{ category_label }} illustration"><svg viewBox="0 0 240 96" focusable="false">
+{% if b.category == "cafe" %}
+<path class="art-steam" d="M91 28c-7-8 7-10 0-19"/><path class="art-steam" d="M119 28c-7-8 7-10 0-19"/><path class="art-steam" d="M147 28c-7-8 7-10 0-19"/>
+<path class="art-fill" d="M70 34h94v33a14 14 0 0 1-14 14H84A14 14 0 0 1 70 67V34Z"/><path d="M164 43h14a13 13 0 0 1 0 26h-15M84 48h40"/>
+<path class="art-detail" d="M94 41c9 12 21 12 30 0"/>
+<circle class="art-spark" cx="52" cy="38" r="4"/><path class="art-spark" d="m192 32 2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z"/>
+{% elif b.category == "restaurant" %}
+<circle class="art-fill" cx="122" cy="53" r="34"/><circle cx="122" cy="53" r="23"/><path d="M103 57c7-13 31-13 38 0"/>
+<path d="M48 22v53m-9-53v18a9 9 0 0 0 18 0V22m-9 53v12m118-65v65m0-65c14 7 17 20 17 35h-17"/>
+<path class="art-spark" d="m197 20 2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z"/>
+{% elif b.category == "grocery" %}
+<path class="art-fill" d="m70 36 10 47h82l10-47H70Z"/><path d="M64 36h114M91 36l25-25 25 25"/>
+<path class="art-leaf" d="M99 31c-17-2-22-13-20-20 14 0 24 6 25 20Zm45 0c17-2 22-13 20-20-14 0-24 6-25 20Z"/>
+<path d="M93 50v20m29-20v20m29-20v20"/><circle class="art-spark" cx="54" cy="28" r="4"/><circle class="art-spark" cx="198" cy="61" r="5"/>
+{% elif b.category == "retail" %}
+<path class="art-fill" d="M72 41h95l-7 43H79l-7-43Z"/><path d="m72 41 16-22h63l16 22M88 19l10 22m53-22-10 22m-33 0c0-15 17-15 17 0"/>
+<path d="M51 31h17m-8-8v17m136 24h15m-7-8v16"/><path class="art-spark" d="m195 22 2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z"/>
+{% elif b.category == "salon" %}
+<g class="salon-hair"><path class="salon-hair-stroke" d="M98 24c12-12 42-15 56 1 12 14 9 41 17 51"/><path class="salon-hair-stroke" d="M106 29c13-9 32-8 41 4 9 11 8 26 17 37"/><path class="salon-hair-stroke" d="M115 35c10-5 21 0 26 9 5 8 4 16 11 22"/></g>
+<g class="salon-scissors"><circle cx="65" cy="63" r="12"/><circle cx="90" cy="76" r="12"/><path d="m75 56 49-36M80 68l51 15M76 58l16 17"/></g>
+<path class="art-fill" d="M174 47h32v38h-32z"/><path d="M181 47V37h18v10m-9 12v15m-8-7h16"/>
+<path class="art-detail" d="M50 20c9 0 16 4 20 11"/>
+{% elif b.category == "fitness" %}
+<g class="art-pulse"><path d="M57 45v22m12-34v46m102-46v46m12-34v22M69 56h102"/>
+<path class="art-fill" d="M82 49h17v14H82zm57 0h17v14h-17z"/></g>
+<path d="m46 25 5-6m143 6-5-6M48 82l-5 6m147-6 5 6"/>
+<path class="art-spark" d="m121 9 2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z"/>
+{% else %}
+<path class="art-fill" d="M82 27h76v54H82z"/><path d="M72 27h96v12H72zm19 20h58m-58 12h42"/>
+<path class="art-spark" d="m53 28 3 8 8 3-8 3-3 8-3-8-8-3 8-3 3-8Zm137 22 2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z"/>
+{% endif %}
+</svg></div>
+<div class="category">
+<svg class="category-icon" viewBox="0 0 48 48" aria-hidden="true">
+{% if b.category == "cafe" %}<path d="M10 19h24v13a7 7 0 0 1-7 7h-9a8 8 0 0 1-8-8V19Zm24 3h4a5 5 0 0 1 0 10h-5M15 13c-2-2 2-3 0-6m9 6c-2-2 2-3 0-6"/>
+{% elif b.category == "restaurant" %}<path d="M7 27a17 17 0 0 1 34 0H7Zm-2 0h38v5H5zm7 10h26M15 19c2-3 5-4 9-4m6 5c1-2 3-3 5-3"/>
+{% elif b.category == "grocery" %}<path d="m8 18 4 21h24l4-21H8Zm-3 0h38M17 18l7-10 7 10M17 24v9m7-9v9m7-9v9"/>
+{% elif b.category == "retail" %}<path d="M15 12a9 9 0 0 1 18 0v4H15v-4Zm-5 4h28l-3 24H13l-3-24Zm13 8v8m-4-4h8"/>
+{% elif b.category == "salon" %}<circle cx="14" cy="14" r="6"/><circle cx="14" cy="34" r="6"/><path d="m19 18 20 18M19 30 39 12M19 18l7 7"/>
+{% elif b.category == "fitness" %}<path d="M6 18v12m6-17v22m24-22v22m6-17v12M12 24h24"/>
+{% else %}<path d="m24 5 4.5 12.5L41 22l-12.5 4.5L24 39l-4.5-12.5L7 22l12.5-4.5L24 5Zm14 25 1.8 5.2L45 37l-5.2 1.8L38 44l-1.8-5.2L31 37l5.2-1.8L38 30Z"/>{% endif %}
+</svg><span>{{ category_label }}</span></div>
+<h1>{{ b.name }}</h1>{% if b.tagline %}<p class="tag">{{ b.tagline }}</p>{% endif %}
+<div class="qr-frame"><div class="qr">{{ qr }}</div></div>
+<div class="cta">{% if lang_hi %}स्कैन करें और इनाम पाएं{% else %}Scan to discover rewards{% endif %}</div>
+<p class="cta-note">{% if lang_hi %}दुकान पर अपने रिवॉर्ड देखें{% else %}Join this shop’s rewards on Firaao{% endif %}</p>
+<div class="meta">{% if b.address %}<span>{{ b.address }}</span>{% endif %}{% if b.hours %}<span>{{ b.hours }}</span>{% endif %}{% if b.pay_upi_id %}<span>UPI: {{ b.pay_upi_id }}</span>{% endif %}</div>
+</div>{% endfor %}
+</body></html>

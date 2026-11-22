@@ -1,0 +1,16 @@
+{% extends "legal/base.html" %}{% block title %}Pricing{% endblock %}{% block body %}
+<h1>Pricing</h1>
+<p>Customers can join shops, track progress, and use rewards for free. Every shop starts with a <b>{{ trial }}-day free trial</b>; no card is needed to begin.</p>
+<table><tr><th>Plan</th><th>Price (incl. {{ gst }}% GST)</th><th>What your shop gets</th></tr>
+<tr><td><b>Monthly</b></td><td>₹{{ monthly }} / month</td><td>Customer shop page and QR, printable QR cards, unlimited customers and reward programs, purchase review and fraud controls, counter screen, staff accounts, customer messaging, reports, and GST invoices.</td></tr>
+<tr><td><b>Yearly</b></td><td>₹{{ yearly }} / year</td><td>All Monthly features, billed once a year.</td></tr></table>
+<h2>If a subscription ends</h2>
+<p>Your account and business dashboard are not immediately removed. Here is what customers and shop owners can expect:</p>
+<table><tr><th>When</th><th>What happens</th></tr>
+<tr><td>On the end date</td><td>The public shop page pauses: new customers cannot join and new purchases cannot be submitted. The owner can still sign in, review existing submissions, and redeem rewards already earned. Customers can sign in to view their saved progress, purchase history, and reward codes.</td></tr>
+<tr><td>For {{ grace }} days after the end date</td><td>Your shop remains paused, but nothing is deleted. Renew during this window to restore the same QR, customer records, progress, and rewards without a back-charge for paused time.</td></tr>
+<tr><td>After that {{ grace }}-day window</td><td>Your shop stays paused while its data is retained for up to {{ retention }} months. Renew before the retention date to restore it. Existing reward expiry dates are extended for the time the shop was paused.</td></tr>
+<tr><td>After the retention date</td><td>Shop data is permanently deleted and cannot be restored. You can create a new shop, which will have a new QR code.</td></tr></table>
+<p>Prices are in Indian rupees and include {{ gst }}% GST. A plan is for the shop owner’s use of the digital platform; customers can participate in shop reward programmes without paying Firaao. Available payment and renewal methods are shown in your dashboard.</p>
+<p>See our <a href="/about/">About Firaao</a>, <a href="/shipping-delivery/">Service Delivery Policy</a>, <a href="/terms/">Terms</a> and <a href="/refund/">Refund &amp; Cancellation Policy</a>.</p>
+{% endblock %}

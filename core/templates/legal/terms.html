@@ -1,0 +1,27 @@
+{% extends "legal/base.html" %}{% block title %}Terms of Service{% endblock %}{% block body %}
+<h1>Terms of Service</h1><p>Last updated: {{ c.updated }}</p>
+<p>These terms are between you and {{ c.name }} ("we", "Firaao"). By registering or using Firaao you agree to them and to our <a href="/privacy/">Privacy Policy</a>. You must be 18 or older and able to enter a contract.</p>
+<h2>1. What Firaao is</h2>
+<p>A software platform where shops run digital reward programmes and customers track progress. We are <b>not</b> a party to any sale between a shop and a customer, we do not handle that money, and we do not guarantee any shop's goods, services or rewards.</p>
+<h2>2. Accounts</h2><p>Give accurate information, keep your password private and tell us about misuse. You are responsible for activity under your account. One person may not create multiple accounts or shops to abuse offers or trials.</p>
+<h2>3. Shop owners</h2>
+<ul><li>You decide your tasks and rewards and must describe them clearly. You must honour rewards that customers have earned, including after your subscription ends.</li>
+<li>Approve purchases honestly; do not reject genuine purchases or change terms to the detriment of customers already in progress.</li>
+<li>You are responsible for your shop's legal compliance (licences, GST, consumer law, offers you promise). Reward codes are not cash and cannot be redeemed with us.</li>
+<li>You may only upload content and details you have the right to use.</li></ul>
+<h2>4. Customers</h2><p>Pay the shop directly. Submit only purchases you really made. Fake claims, sharing counter codes with people who are not at the shop, or other fraud can lead to blocking by the shop or by us and loss of rewards. Disputes about a purchase or reward are between you and the shop; we may help but are not liable.</p>
+<h2>5. Subscription, billing and what happens when it ends</h2>
+<ul><li>Every new shop owner gets a free trial of {{ trial }} days, once. After that the shop needs a paid plan: Monthly ₹{{ monthly }} or Yearly ₹{{ yearly }}, inclusive of {{ gst }}% GST, or the current prices on our <a href="/pricing/">Pricing</a> page. We give notice before changing prices for existing subscribers.</li>
+<li>Payments are made through Razorpay or by UPI to us. With auto-renew you authorise recurring charges until you cancel; you can cancel in the dashboard at any time and the plan runs to the end of the period already paid.</li>
+<li><b>If a plan ends:</b> for {{ grace }} days the shop page and QR are paused for customers (nobody can earn), but nothing is deleted, you can still log in, print your counter card, view reports, and redeem rewards already earned. After that period the QR and print kit stay disabled. Your data is kept for {{ retention }} months from the end of the pause period and then permanently deleted.</li>
+<li><b>If you come back</b> (before deletion), pay any plan and your shop, QR code, programmes, customers, progress and rewards return immediately. Time is not back-charged. Customers' unredeemed reward expiry dates are extended by the time the shop was paused. A new free trial is not given.</li>
+<li>Refunds follow our <a href="/refund/">Refund &amp; Cancellation Policy</a>. The digital service is provided as described in our <a href="/shipping-delivery/">Service Delivery Policy</a>.</li></ul>
+<h2>6. Agents</h2><p>Agents earn a commission on subscriptions paid by shops they bring, at the rate we approve for them, after a hold period, subject to our payout rules, KYC and applicable tax (TDS). We may withhold or reverse commission for refunds, fraud, self-referral or duplicate shops, and may suspend agents who mislead shop owners.</p>
+<h2>7. Not allowed</h2><p>Illegal use; fake purchases or accounts; trying to break, scrape or overload the service; uploading harmful content; using the service to send unwanted messages; reselling access without our approval.</p>
+<h2>8. Messages</h2><p>We send service messages (OTP, approvals, reward and billing alerts). Promotional offers from a shop reach only customers who opted in.</p>
+<h2>9. Our rights</h2><p>We own the platform and its software and branding. You keep your own content and data; you give us permission to host and process it to run the service. We may suspend or end accounts that break these terms or the law, and may change or discontinue features with reasonable notice.</p>
+<h2>10. Disclaimers and liability</h2>
+<p>The service is provided "as is". We work to keep it available but do not promise uninterrupted service. To the extent the law allows, we are not liable for indirect or consequential loss or for disputes between shops and customers, and our total liability to you for any claim is limited to the subscription fees you paid us in the 3 months before the claim. Nothing here limits liability that cannot be limited by law.</p>
+<h2>11. Governing law and disputes</h2><p>Indian law applies. Courts at {{ c.city }} have jurisdiction, subject to any consumer rights you have under law. Please contact us first so we can try to resolve the problem.</p>
+<h2>12. Changes and contact</h2><p>We may update these terms and will tell you in the app for material changes; continued use means acceptance. Questions: {{ c.email }}.</p>
+{% endblock %}

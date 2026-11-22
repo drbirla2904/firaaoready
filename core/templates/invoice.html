@@ -1,0 +1,49 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Invoice {{ p.invoice_no }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+@page{size:A4;margin:12mm}
+*{box-sizing:border-box}
+body{margin:0;background:#f5f2fa;color:#1c1530;font:15px/1.5 Inter,-apple-system,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.sheet{position:relative;max-width:760px;margin:24px auto;background:#fff;border-radius:22px;box-shadow:0 20px 50px -24px #3f238066,0 4px 14px #2a145d14;overflow:hidden}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:28px 32px;color:#fff;background:linear-gradient(135deg,#7a4bd1,#3f2380)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em}
+.mark{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#fff;color:#5e35b1;font-weight:800}
+.head h1{margin:0;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;text-align:right;opacity:.85}
+.head .no{white-space:nowrap;font-size:20px;font-weight:800;letter-spacing:-.02em;text-align:right;margin-top:2px}
+.body{padding:28px 32px 30px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7a7391;margin-bottom:4px}
+.cols p{margin:0;color:#4a4360}.cols b{color:#1c1530}
+table{width:100%;border-collapse:collapse;margin:6px 0 4px}
+th{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7a7391;text-align:left;padding:10px 0;border-bottom:2px solid #e7e2f1}
+td{padding:14px 0;border-bottom:1px solid #eee9f6}
+.r{text-align:right}
+.total td{border:0;padding-top:16px}
+.total .amt{font-size:26px;font-weight:800;color:#5e35b1;letter-spacing:-.02em}
+.stamp{position:absolute;right:34px;top:150px;transform:rotate(-8deg);border:3px solid #12a05f;color:#12a05f;border-radius:12px;padding:4px 14px;font-weight:800;letter-spacing:.14em;font-size:15px;opacity:.9;background:#fff}
+.note{margin-top:18px;padding:12px 14px;border-radius:12px;background:#f5f2fa;color:#6b6485;font-size:12.5px}
+.foot{padding:14px 32px;text-align:center;color:#9a93b3;font-size:12px;border-top:1px solid #eee9f6}
+.btn{display:block;margin:20px auto 0;padding:13px 28px;border:0;border-radius:14px;background:#5e35b1;color:#fff;font:700 15px Inter,system-ui,sans-serif;cursor:pointer;box-shadow:0 8px 18px -10px #5e35b1cc}
+@media(max-width:560px){.cols{grid-template-columns:1fr}.head,.body{padding-left:20px;padding-right:20px}.stamp{top:136px;right:20px}}
+@media print{body{background:#fff}.sheet{margin:0;box-shadow:none;border-radius:0}.btn{display:none}.head{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<div class="sheet">
+<div class="head"><div class="brand"><span class="mark">↻</span>Firaao</div><div><h1>Tax Invoice</h1><div class="no">{{ p.invoice_no }}</div></div></div>
+<div class="stamp">PAID</div>
+<div class="body">
+<div class="cols">
+<div><div class="lbl">From</div><p><b>{{ seller.name }}</b><br>{{ seller.address }}{% if seller.gstin %}<br>GSTIN: {{ seller.gstin }}{% endif %}</p></div>
+<div><div class="lbl">Billed to</div><p><b>{{ p.owner.first_name }}</b><br>{{ p.owner.username }}<br>Date: {{ p.created_at|date:"d M Y" }}</p></div>
+</div>
+<table><tr><th>Description</th><th class="r">Amount (₹)</th></tr>
+<tr><td>Firaao {{ p.plan|title }} subscription</td><td class="r">{{ base }}</td></tr>
+<tr><td>GST @ {{ rate }}%</td><td class="r">{{ gst }}</td></tr>
+<tr class="total"><td><b>Total paid</b></td><td class="r amt">₹{{ gross }}</td></tr></table>
+<div class="note">Payment ref: {{ p.payment_id|default:p.utr }}. Amount is inclusive of GST. This is a computer-generated invoice.</div>
+</div>
+<div class="foot">Thank you for choosing Firaao.</div>
+</div>
+<button class="btn" onclick="print()">Print or save as PDF</button>
+</body></html>

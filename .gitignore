@@ -1,0 +1,11 @@
+.env
+.superuser-credentials.txt
+db.sqlite3
+media/
+private-media/
+staticfiles/
+venv/
+.venv/
+__pycache__/
+backups/
+.previous_release
