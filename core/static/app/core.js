@@ -447,11 +447,18 @@
     const name = inp({ value: me.name, maxlength: 150 });
     const img = (await api('me/profile-image/')).profile_image_url;
     const hidden = S.role === 'customer' ? await api('me/shops/hidden/') : [];
+    const shops = S.role === 'customer' ? (await api('me/wallet/')).shops : [];
     const old = inp({ type: 'password', autocomplete: 'current-password' }), nw = inp({ type: 'password', autocomplete: 'new-password' });
     const photo = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async e => { const f = e.target.files[0]; if (!f) return; e.target.value = ''; const fd = new FormData(); fd.append('profile_image', f); try { await api('me/profile-image/', 'PATCH', fd); toast(t('Photo updated')); FX.render(true); } catch (x) { toast(x.message, true); } } });
     return h('div.stack.l', h('h1', t('Account')),
       h('div.card.stack', h('div.row', avatar(me.name, img), h('div.grow', h('b', me.name || t('Add your name')), h('div.muted.small', me.mobile)), h('button.btn.ghost.sm', { onclick: () => photo.click() }, t('Change photo')), photo),
         field('Name', name), h('button.btn', { onclick: e => busy(e.target, async () => { await api('me/profile/', 'PATCH', { name: name.value }); S.user = null; toast(t('Saved')); }) }, t('Save name'))),
+      S.role === 'customer' ? h('div.card.stack', h('h3', t('My shops')),
+        shops.length ? shops.map(shop => h('a.li.click', { href: '/b/' + encodeURIComponent(shop.shop_code) + '/', style: 'text-decoration:none;color:inherit', 'aria-label': t('Open shop: {shop}', { shop: shop.shop }) },
+          h('span.logo-s', shop.logo_url ? h('img', { src: shop.logo_url, alt: '' }) : FX.initial(shop.shop)),
+          h('span.grow', h('b', shop.shop), h('small.muted', shop.shop_code)),
+          h('span', t('Open shop') + ' ›')))
+          : h('p.small.muted', t('Your shops will appear here after you join a shop.'))) : null,
       h('div.card.stack', h('h3', t('Language')), h('div.seg', ['en', 'hi'].map(l => h('button', { 'aria-selected': String(FX.lang === l), onclick: () => { FX.setLang(l); FX.start(true); } }, l === 'en' ? 'English' : 'हिन्दी')))),
       h('div.card.stack', h('h3', t('Change password')), field('Current password', old), field('New password', nw), h('button.btn.ghost', { onclick: e => busy(e.target, async () => { await api('auth/change-password/', 'POST', { old: old.value, new: nw.value }); old.value = nw.value = ''; toast(t('Password changed.')); }) }, t('Update password'))),
       hidden.length ? h('div.card', h('h3', t('Hidden shops')), hidden.map(s => h('div.li', h('span.grow', s.business__name), h('button.btn.soft.sm', { onclick: async () => { await api('me/shops/' + s.business__shop_code + '/restore/', 'POST'); FX.render(true); } }, t('Restore'))))) : null,

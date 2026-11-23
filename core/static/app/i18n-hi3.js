@@ -44,5 +44,8 @@ Object.assign(window.FX_HI = window.FX_HI || {}, {
 "Share": "शेयर करें",
 "Your shop link": "आपकी दुकान का लिंक",
 "Could not load the QR code. Check your connection.": "QR कोड लोड नहीं हो सका। अपना इंटरनेट जाँचें।",
+"Open shop": "दुकान खोलें",
+"Open shop: {shop}": "{shop} खोलें",
+"Your shops will appear here after you join a shop.": "दुकान से जुड़ने के बाद आपकी दुकानें यहाँ दिखेंगी।",
 "QR card": "QR कार्ड"
 });
