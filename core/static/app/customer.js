@@ -47,6 +47,7 @@
       h('div.card.stack', { style: 'margin-top:16px' }, h('h2', t('Collect rewards at {shop}', { shop: biz.name })),
         h('p.muted', t('Join in 10 seconds with your mobile number. No app to install.')),
         perk ? h('div.banner.green', '🎁 ' + t('Welcome gift: {r}', { r: perk.title })) : null,
+        biz.wheel ? h('div.banner.gold', '🎡 ' + t('Try your luck: {title}', { title: biz.wheel.title }) + ' · ' + biz.wheel.prizes.map(p => p.icon + ' ' + p.title).join('  ·  ')) : null,
         biz.boosts_now.length ? h('div.boost', '⚡ ' + biz.boosts_now[0].title + ' (' + biz.boosts_now[0].multiplier + 'x)') : null,
         biz.programs.slice(0, 1).map(p => h('div.stack.s', p.tasks.map(tk => h('div.li', h('span', '✦'), h('div.grow', h('b', tk.title), tk.rewards[0] ? h('div.small.muted', t('Reward: {r}', { r: tk.rewards[0].title })) : null))))),
         h('button.btn.lg', { onclick: () => { const m = modal(t('Join {shop}', { shop: biz.name }), FX.authScreen({ mode: 'register', role: 'customer' }).querySelector('.form')); } }, t('Join and start earning')),
@@ -190,9 +191,52 @@
       claimBtn(biz, me, tk, live, seen),
       live && me.entries_left_today > 0 ? h('div.claim-note', me.approval_mode === 'auto' ? t('Approved instantly at this shop') : t('Scan the counter QR for instant approval')) : null));
     return h('div.stack', me.status === 'blocked' ? h('div.banner.red', t('This shop has paused your account.')) : null,
+      me.wheel ? wheelCard(biz, me.wheel, me.live && me.status === 'active') : null,
       pend.length ? h('div.banner.blue', '⏳ ' + t('{n} purchase waiting for the shop to confirm', { n: pend.length }) + ' · ' + t('We will tell you the moment it is approved.')) : null,
       list.length ? list : empty('No rewards running right now', 'Check back soon.'),
       biz.pay_link ? h('a.btn.ghost', { href: biz.pay_link }, t('Pay with UPI')) : null);
+  }
+  function wheelCard(biz, wheel, canUseShop) {
+    const colors = ['#6c4bd3', '#f3a712', '#e65d73', '#1b9b78', '#3979d4', '#e88428', '#8e56b0', '#238f9a', '#cb5364', '#62983c', '#d8792f', '#4b65b8'];
+    const total = wheel.prizes.reduce((sum, p) => sum + Number(p.weight || 1), 0);
+    let start = 0;
+    const arcs = wheel.prizes.map(p => {
+      const span = total ? 360 * Number(p.weight || 1) / total : 360;
+      const arc = { center: start + span / 2, end: start + span };
+      start += span;
+      return arc;
+    });
+    const gradient = wheel.prizes.map((p, i) => `${colors[i % colors.length]} ${i ? arcs[i - 1].end : 0}deg ${arcs[i].end}deg`).join(', ');
+    const face = h('div.wheel-face', { style: { background: gradient ? `conic-gradient(${gradient})` : '#dfe3ed' } },
+      wheel.prizes.map((p, i) => {
+        const angle = arcs[i].center;
+        return h('div.wheel-label', { style: { '--wheel-angle': angle + 'deg' } }, h('span', p.icon), h('small', p.title));
+      }), h('div.wheel-hub', '🎡'));
+    const result = wheel.result;
+    const spin = h('button.btn.lg', { disabled: !wheel.can_spin || !canUseShop, type: 'button' }, t('Spin now'));
+    spin.onclick = () => busy(spin, async () => {
+      try {
+        const r = await api('me/shop/' + biz.shop_code + '/wheel/', 'POST');
+        const center = arcs[r.prize_index] ? arcs[r.prize_index].center : 0;
+        face.style.transform = `rotate(${360 * 6 + 360 - center}deg)`;
+        await new Promise(resolve => setTimeout(resolve, matchMedia('(prefers-reduced-motion: reduce)').matches ? 30 : 4300));
+        if (!document.body.contains(face)) return;
+        FX.haptic([20, 40, 20]);
+        if (r.empty) FX.celebrate({ icon: r.icon || '✨', title: t('Better luck next time'), text: t('Come back for another spin soon.') });
+        else FX.celebrate({ icon: r.icon || '🎁', big: true, title: r.title, text: r.terms || t('Your reward is ready to use.') });
+        await refreshShop(biz.shop_code);
+      } catch (e) { toast(e.message, true); }
+    });
+    const status = result ? h('div.banner.' + (result.empty ? 'blue' : 'green'), result.icon + ' ' + (result.empty ? t('Better luck next time') : t('You won: {prize}', { prize: result.title })),
+      result.terms ? h('small', result.terms) : null,
+      result.code ? h('button.btn.sm', { onclick: () => passModal({ title: result.title, code: result.code, expires_at: result.expires_at, terms: result.terms }, biz.brand_color, biz.name) }, t('Show reward code')) : null)
+      : wheel.message === 'already_played' ? h('p.small.muted', t('Your new-customer spin has already been used.'))
+        : wheel.message === 'not_new' ? h('p.small.muted', t('This spin is only for customers who have not made an approved purchase yet.'))
+          : wheel.available_today ? h('p.small.muted', t(wheel.mode === 'new_customer' ? 'New customers can spin once before their first approved purchase.' : 'One spin per day. Today’s prizes may change by weekday.'))
+        : h('p.small.muted', t('No prizes are scheduled for today.'));
+    return h('div.wheel-card', h('div.row.between.wrap', h('div', h('h3', '🎡 ' + wheel.title), h('small.muted', t(wheel.mode === 'daily' ? 'Daily rewards' : 'Welcome spin'))),
+      h('span.pill', t('Spin & win'))), h('div.wheel-stage', h('i.wheel-pointer', '▼'), face),
+      spin, status);
   }
   async function submitSheet(biz, me, tk, seen) {
     const q = new URLSearchParams(location.search), isVisit = tk.type === 'visit';
@@ -246,7 +290,7 @@
   }
   const ticket = (g, shop, color, shopName) => h('div.ticket.' + g.status, h('div.main', h('b', g.title), shop ? h('small.muted', shop) : null,
     g.terms ? h('small.muted', g.terms) : null, h('small', g.status === 'active' ? FX.until(g.expires_at) : t(g.status === 'used' ? 'Used' : g.status === 'expired' ? 'Expired' : 'Cancelled')),
-    g.trigger === 'welcome' ? pill(t('Welcome gift'), 'ok') : g.trigger === 'winback' ? pill(t('Welcome-back gift'), 'ok') : g.trigger === 'referral' ? pill(t('Referral reward'), 'info') : null),
+    g.trigger === 'welcome' ? pill(t('Welcome gift'), 'ok') : g.trigger === 'winback' ? pill(t('Welcome-back gift'), 'ok') : g.trigger === 'referral' ? pill(t('Referral reward'), 'info') : g.trigger === 'wheel' ? pill(t('Spin wheel'), 'info') : null),
     h('div.stub', h('small.muted', t('Show this code')), h('div.code', g.code),
       g.status === 'active' ? h('button.btn.sm', { onclick: () => passModal(g, color, shopName || shop) }, t('Show at counter')) : null,
       g.status === 'active' ? h('button.btn.ghost.sm', { onclick: () => FX.copy(g.code) }, t('Copy')) : null));

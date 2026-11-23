@@ -15,8 +15,8 @@ from django.db.models import Count, Max, Min, Q, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
-from .models import (AuditLog, Booking, CustomerProfile, Feedback, Program, PurchaseEntry, RewardGrant,
-                     TaskProgress)
+from .models import (AuditLog, Booking, Business, CustomerProfile, Feedback, Program, PurchaseEntry, Reward,
+                     RewardGrant, SpinWheel, SpinWheelPlay, TaskProgress)
 from .notify import push
 
 SEGMENTS = ("never", "new", "regular", "at_risk", "lapsed")
@@ -309,7 +309,65 @@ def shop_state(profile):
                      "trigger": g.reward.trigger} for g in grants],
         "active_rewards": len(active), "next_expiry": active[0].expires_at if active else None,
         "boosts_now": [boost_dict(b) for b in active_boosts(biz)],
+        "wheel": wheel_state(profile),
     }
+
+
+def _wheel_prizes(wheel):
+    weekday = timezone.localdate().weekday()
+    prizes = []
+    for prize in wheel.prizes.order_by("id"):
+        days = [int(day) for day in prize.weekdays.split(",") if day.isdigit()]
+        if days and weekday not in days:
+            continue
+        prizes.append({
+            "id": prize.id, "title": prize.title, "icon": prize.icon, "type": prize.type,
+            "value": str(prize.value), "min_purchase": str(prize.min_purchase), "weight": prize.weight,
+        })
+    return prizes
+
+
+def wheel_state(profile):
+    try:
+        wheel = profile.business.spin_wheel
+    except SpinWheel.DoesNotExist:
+        return None
+    if not wheel.enabled:
+        return None
+
+    today = timezone.localdate()
+    plays = SpinWheelPlay.objects.filter(profile=profile)
+    played_today = plays.filter(play_date=today).select_related("prize", "grant__reward").first()
+    has_played = plays.exists()
+    is_new = not profile.entries.filter(status="approved").exists()
+    eligible = (not has_played and is_new) if wheel.mode == "new_customer" else played_today is None
+    prizes = _wheel_prizes(wheel)
+    result = None
+    if played_today:
+        result = {"title": played_today.title, "icon": played_today.icon,
+                  "code": played_today.grant.code if played_today.grant else "",
+                  "empty": played_today.grant_id is None,
+                  "expires_at": played_today.grant.expires_at if played_today.grant else None,
+                  "terms": played_today.grant.reward.terms if played_today.grant else ""}
+    return {
+        "title": wheel.title, "mode": wheel.mode, "can_spin": eligible and bool(prizes),
+        "available_today": bool(prizes), "prizes": prizes, "result": result,
+        "message": "already_played" if played_today or (wheel.mode == "new_customer" and has_played)
+        else "not_new" if wheel.mode == "new_customer" and not is_new else "",
+    }
+
+
+def public_wheel(biz):
+    try:
+        wheel = biz.spin_wheel
+    except SpinWheel.DoesNotExist:
+        return None
+    if not wheel.enabled:
+        return None
+    return {"title": wheel.title, "prizes": [
+        {"title": p.title, "icon": p.icon, "type": p.type, "value": str(p.value)}
+        for p in _wheel_prizes(wheel)
+    ]}
 
 
 def wallet(user):

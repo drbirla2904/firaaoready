@@ -94,7 +94,7 @@ class Reward(models.Model):
     TYPES = [("free_item", "free_item"), ("percent_off", "percent_off"), ("flat_off", "flat_off"),
              ("gift", "gift"), ("custom", "custom")]
     TRIGGERS = [("task", "task"), ("welcome", "welcome"), ("referral", "referral"), ("retired", "retired"),
-                ("winback", "winback")]
+                ("winback", "winback"), ("wheel", "wheel")]
     task = models.ForeignKey(Task, null=True, blank=True, on_delete=models.CASCADE, related_name="rewards")
     title = models.CharField(max_length=120)
     type = models.CharField(max_length=12, choices=TYPES)
@@ -327,6 +327,43 @@ class Boost(models.Model):
     start = models.DateField(null=True, blank=True)
     end = models.DateField(null=True, blank=True)
     active = models.BooleanField(default=True)
+
+
+class SpinWheel(models.Model):
+    MODES = [("daily", "daily"), ("new_customer", "new_customer")]
+    business = models.OneToOneField(Business, on_delete=models.CASCADE, related_name="spin_wheel")
+    enabled = models.BooleanField(default=False)
+    mode = models.CharField(max_length=16, choices=MODES, default="daily")
+    title = models.CharField(max_length=100, default="Spin to win")
+
+
+class SpinWheelPrize(models.Model):
+    TYPES = [("free_item", "free_item"), ("percent_off", "percent_off"), ("flat_off", "flat_off"),
+             ("gift", "gift"), ("custom", "custom"), ("empty", "empty")]
+    wheel = models.ForeignKey(SpinWheel, on_delete=models.CASCADE, related_name="prizes")
+    title = models.CharField(max_length=100)
+    icon = models.CharField(max_length=8, default="🎁")
+    type = models.CharField(max_length=12, choices=TYPES)
+    value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    min_purchase = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    weight = models.PositiveSmallIntegerField(default=1)
+    weekdays = models.CharField(max_length=13, blank=True)
+    expiry_days = models.PositiveSmallIntegerField(default=30)
+    terms = models.CharField(max_length=300, blank=True)
+
+
+class SpinWheelPlay(models.Model):
+    profile = models.ForeignKey(CustomerProfile, on_delete=models.CASCADE, related_name="wheel_plays")
+    play_date = models.DateField()
+    prize = models.ForeignKey(SpinWheelPrize, null=True, blank=True, on_delete=models.SET_NULL)
+    title = models.CharField(max_length=100)
+    icon = models.CharField(max_length=8, default="🎁")
+    grant = models.OneToOneField("RewardGrant", null=True, blank=True, on_delete=models.SET_NULL,
+                                 related_name="wheel_play")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("profile", "play_date")
 
 
 class Service(models.Model):  # bookable service (haircut, oil change, 1:1 class ...)

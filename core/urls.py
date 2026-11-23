@@ -49,6 +49,7 @@ urlpatterns = [
     path("programs/<int:pk>/tasks/", ex.program_add_task), path("b/<str:code>/rewards/quick/", ex.quick_reward), path("b/<str:code>/insights/", ev.insights),
     path("b/<str:code>/feedback/", ev.feedback_list),
     path("b/<str:code>/boosts/", ev.boosts), path("boosts/<int:pk>/", ev.boost_detail),
+    path("b/<str:code>/wheel/", ev.wheel_config), path("me/shop/<str:code>/wheel/", ev.spin_wheel),
     path("b/<str:code>/perks/", ev.perks),
     path("blueprints/", ev.blueprint_list), path("b/<str:code>/blueprint/", ev.blueprint_apply),
     path("b/<str:code>/services/", ev.services_), path("services/<int:pk>/", ev.service_detail),

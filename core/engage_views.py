@@ -1,4 +1,5 @@
 """v2 API: wallet, customer CRM, campaigns, insights, boosts, perks, services, bookings, feedback, blueprints."""
+import secrets
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
@@ -13,8 +14,8 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from . import blueprints, engage, services
-from .models import (AuditLog, Booking, Boost, Business, CustomerProfile, Feedback, PurchaseEntry, Reward, Service,
-                     can_manage)
+from .models import (AuditLog, Booking, Boost, Business, CustomerProfile, Feedback, PurchaseEntry, Reward,
+                     RewardGrant, Service, SpinWheel, SpinWheelPlay, SpinWheelPrize, can_manage)
 from .notify import push
 from .serializers import BoostSerializer, BookingSerializer, FeedbackSerializer, ServiceSerializer
 
@@ -100,6 +101,157 @@ def customer_shop(request, code):
         "friends_referred": p.referred.count(),
     })
     return Response(st)
+
+
+def _wheel_config(wheel):
+    return {
+        "enabled": wheel.enabled, "mode": wheel.mode, "title": wheel.title,
+        "prizes": [{
+            "title": p.title, "icon": p.icon, "type": p.type, "value": str(p.value),
+            "min_purchase": str(p.min_purchase), "weight": p.weight,
+            "weekdays": [int(day) for day in p.weekdays.split(",") if day.isdigit()],
+            "expiry_days": p.expiry_days, "terms": p.terms,
+        } for p in wheel.prizes.order_by("id")],
+    }
+
+
+@api_view(["GET", "PUT"])
+def wheel_config(request, code):
+    biz = _owner_biz(request, code)
+    if request.method == "GET":
+        wheel, _ = SpinWheel.objects.get_or_create(business=biz)
+        return Response(_wheel_config(wheel))
+    data = request.data
+    if request.method == "PUT":
+        mode = data.get("mode", "daily")
+        title = str(data.get("title", "Spin to win")).strip()
+        prizes = data.get("prizes")
+        if mode not in dict(SpinWheel.MODES):
+            raise ValidationError("Choose daily or new-customer spins.")
+        if not title or len(title) > 100:
+            raise ValidationError("Enter a wheel title up to 100 characters.")
+        if not isinstance(prizes, list) or len(prizes) > 12:
+            raise ValidationError("Add up to 12 wheel prizes.")
+        enabled = data.get("enabled", False)
+        if not isinstance(enabled, bool):
+            raise ValidationError("Wheel active must be true or false.")
+        if enabled and not prizes:
+            raise ValidationError("Add at least one prize before enabling the wheel.")
+
+        cleaned = []
+        for item in prizes:
+            if not isinstance(item, dict):
+                raise ValidationError("Each prize must be an object.")
+            kind = item.get("type")
+            if kind not in dict(SpinWheelPrize.TYPES):
+                raise ValidationError("Choose a valid prize type.")
+            prize_title = str(item.get("title", "")).strip()
+            if kind == "empty":
+                prize_title = prize_title or "Better luck next time"
+            if not prize_title or len(prize_title) > 100:
+                raise ValidationError("Enter a prize title up to 100 characters.")
+            value = _dec(item.get("value", 0))
+            minimum = _dec(item.get("min_purchase", 0), "minimum purchase")
+            if kind == "percent_off" and value > 100:
+                raise ValidationError("A percentage offer cannot be over 100%.")
+            try:
+                weight = int(item.get("weight", 1))
+                expiry = int(item.get("expiry_days", 30))
+                days = item.get("weekdays", [])
+                if not isinstance(days, list) or any(str(day) not in tuple(str(i) for i in range(7)) for day in days):
+                    raise ValueError
+                days = sorted({int(day) for day in days})
+            except (TypeError, ValueError):
+                raise ValidationError("Use weekdays 0-6, weight 1-100, and expiry 1-365 days.")
+            if not 1 <= weight <= 100 or not 1 <= expiry <= 365:
+                raise ValidationError("Use weekdays 0-6, weight 1-100, and expiry 1-365 days.")
+            terms = str(item.get("terms", "")).strip()[:300]
+            cleaned.append({
+                "title": prize_title, "icon": str(item.get("icon", "🎁")).strip()[:8] or "🎁",
+                "type": kind, "value": value, "min_purchase": minimum, "weight": weight,
+                "weekdays": ",".join(map(str, days)), "expiry_days": expiry, "terms": terms,
+            })
+
+        with transaction.atomic():
+            wheel, _ = SpinWheel.objects.get_or_create(business=biz)
+            wheel.enabled, wheel.mode, wheel.title = enabled, mode, title
+            wheel.save()
+            wheel.prizes.all().delete()
+            for item in cleaned:
+                wheel.prizes.create(**item)
+    return Response(_wheel_config(wheel))
+
+
+@api_view(["POST"])
+@transaction.atomic
+def spin_wheel(request, code):
+    user = _customer(request)
+    profile = get_object_or_404(CustomerProfile.objects.select_for_update(), user=user, business__shop_code=code)
+    biz = profile.business
+    if profile.status != "active" or not biz.is_live:
+        raise PermissionDenied("This shop is not taking rewards right now.")
+    try:
+        wheel = biz.spin_wheel
+    except SpinWheel.DoesNotExist:
+        raise ValidationError("This shop has no active spin wheel.")
+    if not wheel.enabled:
+        raise ValidationError("This shop has no active spin wheel.")
+
+    today = timezone.localdate()
+    existing = SpinWheelPlay.objects.select_related("prize", "grant__reward").filter(profile=profile, play_date=today).first()
+    if existing:
+        prizes = engage._wheel_prizes(wheel)
+        prize_index = next((i for i, p in enumerate(prizes) if p["id"] == existing.prize_id), 0)
+        return Response({
+            "title": existing.title, "icon": existing.icon, "empty": existing.grant_id is None,
+            "code": existing.grant.code if existing.grant else "", "prize_index": prize_index,
+            "expires_at": existing.grant.expires_at if existing.grant else None,
+            "terms": existing.grant.reward.terms if existing.grant else "",
+            "already_played": True,
+        })
+    if wheel.mode == "new_customer":
+        if profile.wheel_plays.exists():
+            raise ValidationError("The new-customer spin has already been used.")
+        if profile.entries.filter(status="approved").exists():
+            raise ValidationError("This spin is only for new customers.")
+
+    weekday = today.weekday()
+    options = []
+    for prize in wheel.prizes.order_by("id"):
+        days = {int(day) for day in prize.weekdays.split(",") if day.isdigit()}
+        if not days or weekday in days:
+            options.append(prize)
+    if not options:
+        raise ValidationError("There are no prizes scheduled for today.")
+    total_weight = sum(prize.weight for prize in options)
+    selected = secrets.randbelow(total_weight)
+    prize_index = 0
+    for prize_index, prize in enumerate(options):
+        selected -= prize.weight
+        if selected < 0:
+            break
+
+    grant = None
+    if prize.type != "empty":
+        terms = prize.terms
+        if prize.min_purchase:
+            condition = f"Minimum purchase: ₹{prize.min_purchase:.2f}"
+            terms = f"{condition}. {terms}" if terms else condition
+        reward = Reward.objects.create(
+            business=biz, trigger="wheel", title=prize.title, type=prize.type,
+            value=prize.value, expiry_days=prize.expiry_days, terms=terms,
+        )
+        grant = RewardGrant.objects.create(
+            profile=profile, reward=reward, expires_at=timezone.now() + timedelta(days=prize.expiry_days),
+        )
+    SpinWheelPlay.objects.create(
+        profile=profile, play_date=today, prize=prize, title=prize.title, icon=prize.icon, grant=grant,
+    )
+    return Response({
+        "title": prize.title, "icon": prize.icon, "empty": grant is None,
+        "code": grant.code if grant else "", "expires_at": grant.expires_at if grant else None,
+        "terms": grant.reward.terms if grant else "", "prize_index": prize_index, "already_played": False,
+    }, status=201)
 
 
 @api_view(["POST"])

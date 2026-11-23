@@ -378,7 +378,15 @@
   FX.signIn = async function (r) {
     S.token = r.token; S.role = r.role; localStorage.t = r.token; localStorage.r = r.role;
     if (r.needs_consent) await new Promise(res => { const m = modal(t('Terms and privacy'), h('div.stack', h('p', t('Please accept our Terms and Privacy Policy to continue.')), h('div.row', h('a', { href: '/terms/', target: '_blank' }, t('Terms')), h('a', { href: '/privacy/', target: '_blank' }, t('Privacy Policy'))), h('button.btn', { onclick: async e => { await busy(e.target, async () => { await api('auth/accept/', 'POST', {}); m.close(); res(); }); } }, t('I agree')))); });
-    location.replace(location.href);
+    const shopCode = (/^\/b\/([^/]+)/.exec(location.pathname) || [])[1];
+    if (shopCode && S.role === 'customer') {
+      await api('b/' + encodeURIComponent(shopCode) + '/join/', 'POST', {
+        consent: false, ref: new URLSearchParams(location.search).get('ref') || ''
+      });
+    }
+    const authDialog = document.querySelector('dialog[open]');
+    if (authDialog) authDialog.close();
+    await FX.start(true);
   };
   FX.start = async function (soft) {
     document.documentElement.lang = FX.lang;

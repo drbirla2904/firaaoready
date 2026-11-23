@@ -7,7 +7,7 @@ from rest_framework.test import APITestCase
 
 from . import engage
 from .models import (Booking, Boost, Business, CustomerProfile, Feedback, Notification, PurchaseEntry, Reward,
-                     RewardGrant, TaskProgress, User)
+                     RewardGrant, SpinWheel, SpinWheelPlay, TaskProgress, User)
 
 
 class GrowthBase(APITestCase):
@@ -106,7 +106,7 @@ class PerkTests(GrowthBase):
         self.assertEqual(len(ref), 6)
         friend = self.customer("9100000022", ref=ref)
         self.assertEqual(CustomerProfile.objects.get(user__username="9100000022").referred_by.user.username, "9100000021")
-        self.assertFalse(RewardGrant.objects.filter(reward__trigger="referral").exists())  # not before the first purchase
+        self.assertFalse(RewardGrant.objects.filter(reward__trigger="referral").exists())
         self.buy(friend)
         g = RewardGrant.objects.get(reward__trigger="referral")
         self.assertEqual(g.profile.user.username, "9100000021")
@@ -137,6 +137,81 @@ class PerkTests(GrowthBase):
         self.assertEqual(self.client.put(f"/api/b/{self.code}/perks/", {"welcome": {"title": "", "type": "gift"}}, format="json").status_code, 400)
         self.assertEqual(self.client.put(f"/api/b/{self.code}/perks/", {"welcome": {"title": "x", "type": "nonsense"}}, format="json").status_code, 400)
         self.assertEqual(self.client.put(f"/api/b/{self.code}/perks/", {"welcome": {"title": "x", "type": "gift", "value": "-5"}}, format="json").status_code, 400)
+
+
+class SpinWheelTests(GrowthBase):
+    def configure(self, mode="daily", prizes=None):
+        self.as_owner()
+        return self.client.put(f"/api/b/{self.code}/wheel/", {
+            "enabled": True, "mode": mode, "title": "Lucky wheel",
+            "prizes": prizes or [{
+                "title": "10% off", "type": "percent_off", "value": 10,
+                "min_purchase": 500, "weight": 4, "weekdays": [], "terms": "Dine-in only",
+            }],
+        }, format="json")
+
+    def test_spin_creates_conditional_reward_and_retries_return_same_result(self):
+        response = self.configure()
+        self.assertEqual(response.status_code, 200, response.data)
+        customer = self.customer("9100000050")
+        self.client.credentials(HTTP_AUTHORIZATION=customer)
+
+        first = self.client.post(f"/api/me/shop/{self.code}/wheel/", {}, format="json")
+        self.assertEqual(first.status_code, 201, first.data)
+        grant = RewardGrant.objects.get(code=first.data["code"])
+        self.assertEqual(grant.reward.trigger, "wheel")
+        self.assertEqual(grant.reward.type, "percent_off")
+        self.assertIn("Minimum purchase: ₹500.00", grant.reward.terms)
+        self.assertIn("Dine-in only", grant.reward.terms)
+
+        retry = self.client.post(f"/api/me/shop/{self.code}/wheel/", {}, format="json")
+        self.assertEqual(retry.status_code, 200, retry.data)
+        self.assertEqual(retry.data["code"], first.data["code"])
+        self.assertEqual(SpinWheelPlay.objects.filter(profile__user__username="9100000050").count(), 1)
+
+        shop = self.client.get(f"/api/me/shop/{self.code}/")
+        self.assertEqual(shop.data["wheel"]["result"]["code"], first.data["code"])
+        self.assertFalse(shop.data["wheel"]["can_spin"])
+
+    def test_new_customer_wheel_rejects_a_customer_with_an_approved_purchase(self):
+        self.assertEqual(self.configure(mode="new_customer").status_code, 200)
+        customer = self.customer("9100000051")
+        self.buy(customer)
+        self.client.credentials(HTTP_AUTHORIZATION=customer)
+        response = self.client.post(f"/api/me/shop/{self.code}/wheel/", {}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(SpinWheelPlay.objects.filter(profile__user__username="9100000051").exists())
+
+    def test_weekday_prizes_only_appear_on_their_scheduled_day(self):
+        today = timezone.localdate().weekday()
+        other = (today + 1) % 7
+        response = self.configure(prizes=[
+            {"title": "Today only", "type": "free_item", "weekdays": [today]},
+            {"title": "Tomorrow only", "type": "empty", "weekdays": [other]},
+        ])
+        self.assertEqual(response.status_code, 200, response.data)
+        customer = self.customer("9100000052")
+        self.client.credentials(HTTP_AUTHORIZATION=customer)
+        state = self.client.get(f"/api/me/shop/{self.code}/").data["wheel"]
+        self.assertEqual([prize["title"] for prize in state["prizes"]], ["Today only"])
+        spin = self.client.post(f"/api/me/shop/{self.code}/wheel/", {}, format="json")
+        self.assertEqual(spin.status_code, 201, spin.data)
+        self.assertEqual(spin.data["title"], "Today only")
+
+    def test_wheel_configuration_validates_percentages_and_requires_a_prize_when_enabled(self):
+        self.as_owner()
+        path = f"/api/b/{self.code}/wheel/"
+        bad_percent = self.client.put(path, {
+            "enabled": True, "mode": "daily", "prizes": [{
+                "title": "Too much", "type": "percent_off", "value": 101,
+            }],
+        }, format="json")
+        self.assertEqual(bad_percent.status_code, 400)
+        no_prizes = self.client.put(path, {
+            "enabled": True, "mode": "daily", "prizes": [],
+        }, format="json")
+        self.assertEqual(no_prizes.status_code, 400)
+        self.assertFalse(SpinWheel.objects.filter(business=self.biz).exists())
 
 
 class TierStreakSegmentTests(GrowthBase):

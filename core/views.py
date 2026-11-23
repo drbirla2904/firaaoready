@@ -111,6 +111,7 @@ def public_business(request, code):
     from . import engage
     from .serializers import ServiceSerializer
     data["boosts_now"] = [engage.boost_dict(b) for b in engage.active_boosts(biz)]
+    data["wheel"] = engage.public_wheel(biz)
     data["services"] = ServiceSerializer(biz.services.filter(active=True), many=True).data if biz.bookings_enabled else []
     data["perks"] = {r.trigger: {"title": r.title} for r in biz.perk_rewards.filter(trigger__in=("welcome", "referral"))}
     data["tiers"] = [{"tier": t, "visits": n, "perk": perk} for t, n, perk in engage.tier_ladder(biz)[1:]]

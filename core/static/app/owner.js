@@ -382,8 +382,52 @@
       h('div.row', cur ? h('button.btn.danger', { onclick: e => busy(e.target, async () => { await api('b/' + code() + '/perks/', 'PUT', { [trig]: null }); m.close(); onDone(); }) }, t('Turn off')) : null,
         h('button.btn.grow', { onclick: e => busy(e.target, async () => { await api('b/' + code() + '/perks/', 'PUT', { [trig]: { title: title.value, type: type.value, value: val.value, expiry_days: days.value } }); m.close(); onDone(); }) }, t('Save')))));
   }
+  function wheelEditor(cur, onDone) {
+    const enabled = h('input', { type: 'checkbox', checked: cur.enabled });
+    const mode = sel([['daily', 'Once per day'], ['new_customer', 'New customers only']], cur.mode || 'daily');
+    const title = inp({ value: cur.title || 'Spin to win', maxlength: 100 });
+    const err = h('div.err', { role: 'alert' }), list = h('div.stack');
+    const rows = (cur.prizes || []).map(p => makeRow(p));
+    const draw = () => list.replaceChildren(...rows.map((r, i) => h('div.card.stack',
+      h('div.hd', h('b', (r.title.value || t('Prize')) + ' · ' + r.icon.value), h('button.btn.danger.sm', { onclick: () => { rows.splice(i, 1); draw(); } }, t('Remove'))),
+      h('div.g2', field('Prize title', r.title), field('Icon or emoji', r.icon)),
+      h('div.g2', field('Prize type', r.type), field('Value (₹ or %)', r.value)),
+      h('div.g2', field('Minimum purchase (₹)', r.minimum), field('Chance weight (1-100)', r.weight)),
+      h('div.g2', field('Weekdays (0=Mon … 6=Sun; blank=any)', r.days), field('Valid for (days)', r.expiry)),
+      field('Extra conditions', r.terms))));
+    function makeRow(p) {
+      return {
+        title: inp({ value: p ? p.title : '', maxlength: 100, ph: 'e.g. Free coffee or 10% off' }),
+        icon: inp({ value: p ? p.icon : '🎁', maxlength: 8, ph: '🎁' }),
+        type: sel([['free_item', 'Free item'], ['percent_off', 'Percent off'], ['flat_off', 'Flat amount off'], ['gift', 'Gift'], ['custom', 'Offer'], ['empty', 'No prize']], p ? p.type : 'free_item'),
+        value: inp({ type: 'number', min: '0', value: p ? p.value : 0 }),
+        minimum: inp({ type: 'number', min: '0', value: p ? p.min_purchase : 0 }),
+        weight: inp({ type: 'number', min: '1', max: '100', value: p ? p.weight : 1 }),
+        days: inp({ value: p ? (p.weekdays || []).join(',') : '', placeholder: 'e.g. 0,2,4' }),
+        expiry: inp({ type: 'number', min: '1', max: '365', value: p ? p.expiry_days : 30 }),
+        terms: inp({ value: p ? p.terms : '', maxlength: 300, ph: 'e.g. Dine-in only' })
+      };
+    }
+    const m = modal(t('Spin wheel'), h('div.stack', h('p.muted', t('Choose when customers can spin. Prize weights set the relative chance; weekday-specific prizes only appear on those days.')),
+      h('label.check', enabled, h('span', t('Wheel is active'))), field('Wheel title', title), field('Spin eligibility', mode), list,
+      h('button.btn.ghost', { onclick: () => { if (rows.length >= 12) { err.textContent = t('A wheel can have up to 12 prizes.'); return; } rows.push(makeRow(null)); draw(); } }, '+ ' + t('Add prize')),
+      h('small.muted', t('A minimum purchase is shown as a condition on the reward pass for staff to verify.')),
+      err, h('button.btn.lg', { onclick: e => busy(e.target, async () => {
+        try {
+          const prizes = rows.map(r => ({
+            title: r.title.value, icon: r.icon.value, type: r.type.value, value: r.value.value,
+            min_purchase: r.minimum.value, weight: r.weight.value, expiry_days: r.expiry.value,
+            weekdays: r.days.value.trim() ? r.days.value.split(',').map(d => Number(d.trim())) : [],
+            terms: r.terms.value,
+          }));
+          await api('b/' + code() + '/wheel/', 'PUT', { enabled: enabled.checked, mode: mode.value, title: title.value, prizes });
+          m.close(); onDone(); toast(t('Wheel saved'));
+        } catch (x) { err.textContent = x.message; }
+      }) }, t('Save wheel'))));
+    draw();
+  }
   R.rewards = async function () {
-    const [boosts, perks, act] = await Promise.all([api('b/' + code() + '/boosts/'), api('b/' + code() + '/perks/'), api('b/' + code() + '/reward-activity/').catch(() => ({ rewards: [] }))]);
+    const [boosts, perks, act, wheel] = await Promise.all([api('b/' + code() + '/boosts/'), api('b/' + code() + '/perks/'), api('b/' + code() + '/reward-activity/').catch(() => ({ rewards: [] })), api('b/' + code() + '/wheel/')]);
     const stats = {}; act.rewards.forEach(r => { stats[r.id] = r.stats; });
     const biz = S.biz, done = () => FX.render(true);
     const silver = inp({ type: 'number', min: '0', value: biz.tier_silver_visits }), gold = inp({ type: 'number', min: '0', value: biz.tier_gold_visits }), sp = inp({ value: biz.silver_perk, maxlength: 120, ph: 'e.g. Free size upgrade' }), gp = inp({ value: biz.gold_perk, maxlength: 120, ph: 'e.g. Priority service' });
@@ -396,6 +440,9 @@
           h('button.btn.ghost.sm', { onclick: () => boostEditor(b, done) }, t('Edit')),
           h('button.btn.danger.sm', { onclick: e => busy(e.target, async () => { await api('boosts/' + b.id + '/', 'DELETE'); done(); }) }, t('Delete')))) : empty('No boosts yet'))),
       h('div.section', h('h2', { style: 'margin-bottom:12px' }, t('Welcome and referral gifts')), h('div.g2', perkCard('welcome', 'Welcome gift', 'Make new customers feel welcome on their first purchase.'), perkCard('referral', 'Referral reward', 'Reward customers who bring friends.'))),
+      h('div.section', h('div.hd', h('h2', t('Spin wheel')), h('button.btn.soft.sm', { onclick: () => wheelEditor(wheel, done) }, t(wheel.enabled ? 'Edit wheel' : 'Set up wheel'))),
+        h('div.card.stack', wheel.enabled ? h('div.row', h('span.em', '🎡'), h('div.grow', h('b', wheel.title), h('div.small.muted', t(wheel.mode === 'daily' ? 'Daily spins with weekday prizes' : 'New customers only')))) : h('p.muted', t('Offer customers an animated chance to win a free item, an offer, or no prize.')),
+          wheel.enabled ? h('div.chips', wheel.prizes.map(p => h('span.chip', p.icon + ' ' + p.title))) : null)),
       h('div.section', h('h2', { style: 'margin-bottom:12px' }, t('Membership tiers')), h('div.card.stack', h('p.muted.small', t('Tiers are based on total visits. Perks are things you honour at the counter.')),
         h('div.g2', field('Silver after (visits)', silver), field('Gold after (visits)', gold)), h('div.g2', field('Silver perk', sp), field('Gold perk', gp)),
         h('button.btn.sm', { style: 'justify-self:start', onclick: e => busy(e.target, async () => { await api('b/' + code() + '/settings/', 'PATCH', { tier_silver_visits: +silver.value, tier_gold_visits: +gold.value, silver_perk: sp.value, gold_perk: gp.value }); await FX.reloadShops(); toast(t('Saved')); }) }, t('Save tiers')))));
