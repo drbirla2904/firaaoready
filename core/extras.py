@@ -112,11 +112,29 @@ def _clean_reward(d, partial=False):
     return out
 
 
-@api_view(["PATCH"])
+@api_view(["PATCH", "DELETE"])
 @transaction.atomic
 def reward_update(request, pk):
-    """Edit a reward. Codes already issued keep working; the new wording and value apply to every reward from now on."""
+    """Edit a reward or delete an unused task reward without disturbing customer activity."""
     r = get_object_or_404(Reward.objects.select_for_update(), Q(task__program__business__owner=request.user) | Q(business__owner=request.user), pk=pk)
+    if request.method == "DELETE":
+        if not r.task_id:
+            raise ValidationError("Only task rewards can be deleted here.")
+        task = get_object_or_404(Task.objects.select_for_update(), pk=r.task_id)
+        has_customer_data = (
+            PurchaseEntry.objects.filter(task=task).exists()
+            or TaskProgress.objects.filter(task=task).exists()
+            or RewardGrant.objects.filter(reward__task=task).exists()
+        )
+        if has_customer_data:
+            raise ValidationError("This reward cannot be deleted because customers have started collecting it or received a reward code.")
+        business = task.program.business
+        reward_id = r.pk
+        r.delete()
+        if not task.rewards.exists():
+            task.delete()
+        AuditLog.objects.create(business=business, actor=request.user, action="reward_delete", ref=str(reward_id))
+        return Response({"id": reward_id, "deleted": True})
     for k, v in _clean_reward(request.data, partial=True).items():
         setattr(r, k, v)
     r.save()

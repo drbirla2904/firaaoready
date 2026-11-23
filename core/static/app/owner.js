@@ -342,7 +342,20 @@
     const when = p.start || p.end ? h('small.muted', (p.start ? t('From {d}', { d: FX.fmtDate(p.start) }) : '') + (p.start && p.end ? ' · ' : '') + (p.end ? t('Until {d}', { d: FX.fmtDate(p.end) }) : '')) : null;
     return h('div.card.stack', h('div.hd', h('div', h('h3', p.title), when), pill1),
       p.tasks.map(tk => { const st = tk.rewards[0] && stats[tk.rewards[0].id];
-        return h('div.li', { style: 'align-items:flex-start' }, h('div.grow.stack.s', h('b', tk.title), h('div.small.muted', tk.rewards.map(r => '🎁 ' + r.title).join(', ')),
+        const rewardRows = tk.rewards.map(r => {
+          const rewardStats = stats[r.id], canDelete = rewardStats && rewardStats.participants === 0;
+          return h('div.row.wrap', h('span.grow.small.muted', '🎁 ' + r.title),
+            p.archived ? null : h('button.btn.danger.sm', {
+              disabled: !canDelete,
+              title: canDelete ? t('Delete this reward') : rewardStats ? t('Customers are already using this reward') : t('Customer activity could not be checked'),
+              onclick: e => busy(e.target, async () => {
+                if (!await confirmBox(t('Delete this reward? This removes only this reward and cannot be undone.'), t('Delete reward'), true)) return;
+                await api('rewards/' + r.id + '/', 'DELETE');
+                await FX.reloadShops(); toast(t('Reward deleted')); onDone();
+              })
+            }, t('Delete reward')));
+        });
+        return h('div.li', { style: 'align-items:flex-start' }, h('div.grow.stack.s', h('b', tk.title), h('div.stack.s', rewardRows),
           st ? h('small', '👥 ' + t('{n} collecting', { n: st.in_progress }) + (st.available ? ' · 🎁 ' + t('{n} ready', { n: st.available }) : '') + (st.redeemed ? ' · ✅ ' + t('{n} redeemed', { n: st.redeemed }) : '')) : null),
           h('div.row.wrap', { style: 'justify-content:flex-end' }, h('button.btn.soft.sm', { onclick: () => peopleDrawer(tk) }, '👥 ' + t('Who')), p.archived ? null : h('button.btn.ghost.sm', { onclick: () => taskEditor(tk, onDone) }, t('Edit'))));
       }),

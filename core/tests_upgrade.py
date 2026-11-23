@@ -203,6 +203,7 @@ class RewardEditAndInvolvementTests(GrowthBase):
         rw = self.visit_task.rewards.first()
         self.login("9100000077", "owner")
         self.assertEqual(self.client.patch(f"/api/rewards/{rw.id}/", {"title": "Hacked"}, format="json").status_code, 404)
+        self.assertEqual(self.client.delete(f"/api/rewards/{rw.id}/").status_code, 404)
 
     def test_add_task_with_reward_to_running_program(self):
         self.as_owner()
@@ -398,3 +399,53 @@ class QuickRewardTests(GrowthBase):
         self.assertEqual(r.status_code, 201, r.data)
         from .models import RewardGrant
         self.assertTrue(RewardGrant.objects.filter(reward__title="Free biscuit", profile__user__username="9100000092").exists() or r.data["status"] == "pending")
+
+    def test_owner_can_delete_one_unused_reward_without_deleting_program(self):
+        from .models import Reward, Task
+
+        self.as_owner()
+        reward = self.visit_task.rewards.first()
+        sibling = Reward.objects.create(task=self.visit_task, title="Free tea", type="free_item")
+        response = self.client.delete(f"/api/rewards/{reward.pk}/")
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertTrue(response.data["deleted"])
+        self.assertFalse(Reward.objects.filter(pk=reward.pk).exists())
+        self.assertTrue(Reward.objects.filter(pk=sibling.pk).exists())
+        self.assertTrue(Task.objects.filter(pk=self.visit_task.pk).exists())
+        self.assertTrue(self.biz.programs.exists())
+        self.assertTrue(Task.objects.filter(pk=self.amount_task.pk).exists())
+
+    def test_reward_delete_is_blocked_by_customer_activity_or_reward_code(self):
+        from .models import Reward, RewardGrant, TaskProgress
+
+        reward = self.visit_task.rewards.first()
+        cust = self.customer("9100000093")
+        profile = CustomerProfile.objects.get(user__username="9100000093", business=self.biz)
+        TaskProgress.objects.create(profile=profile, task=self.visit_task, current_value=1, target=5)
+
+        self.as_owner()
+        response = self.client.delete(f"/api/rewards/{reward.pk}/")
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(Reward.objects.filter(pk=reward.pk).exists())
+
+        TaskProgress.objects.filter(profile=profile, task=self.visit_task).delete()
+        RewardGrant.objects.create(
+            profile=profile, reward=reward, expires_at=timezone.now() + timedelta(days=5)
+        )
+        response = self.client.delete(f"/api/rewards/{reward.pk}/")
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(Reward.objects.filter(pk=reward.pk).exists())
+
+    def test_pending_customer_purchase_counts_as_reward_activity(self):
+        reward = self.visit_task.rewards.first()
+        cust = self.customer("9100000094")
+        self.client.credentials(HTTP_AUTHORIZATION=cust)
+        entry = self.client.post("/api/entries/", {"task": self.visit_task.pk, "value": 1})
+        self.assertEqual(entry.status_code, 201, entry.data)
+
+        self.as_owner()
+        activity = self.client.get(f"/api/b/{self.code}/reward-activity/").data["rewards"]
+        row = next(item for item in activity if item["id"] == reward.pk)
+        self.assertEqual(row["stats"]["participants"], 1)
+        self.assertEqual(self.client.delete(f"/api/rewards/{reward.pk}/").status_code, 400)

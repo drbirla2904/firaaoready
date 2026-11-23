@@ -57,18 +57,33 @@ def reward_activity(request, code):
     task_ids = {reward.task_id for reward in rewards}
     reward_ids = {reward.id for reward in rewards}
     progress_by_task = {}
+    profile_ids_by_task = {}
     for progress in TaskProgress.objects.filter(task_id__in=task_ids).select_related(
         "profile__user"
     ):
         progress_by_task.setdefault(progress.task_id, {})[progress.profile_id] = progress
+        profile_ids_by_task.setdefault(progress.task_id, set()).add(progress.profile_id)
 
     grants_by_reward = {}
     for grant in RewardGrant.objects.filter(reward_id__in=reward_ids).select_related(
-        "profile__user"
+        "profile__user", "reward"
     ).order_by("-issued_at"):
         grants_by_reward.setdefault(grant.reward_id, {}).setdefault(
             grant.profile_id, []
         ).append(grant)
+        profile_ids_by_task.setdefault(grant.reward.task_id, set()).add(grant.profile_id)
+
+    entry_profiles = PurchaseEntry.objects.filter(task_id__in=task_ids).values_list(
+        "task_id", "profile_id"
+    ).distinct()
+    for task_id, profile_id in entry_profiles:
+        profile_ids_by_task.setdefault(task_id, set()).add(profile_id)
+
+    participant_ids = set().union(*profile_ids_by_task.values()) if profile_ids_by_task else set()
+    profiles_by_id = {
+        profile.pk: profile
+        for profile in CustomerProfile.objects.filter(pk__in=participant_ids).select_related("user")
+    }
 
     last_activity = {
         (row["task_id"], row["profile_id"]): row["last_activity"]
@@ -82,7 +97,7 @@ def reward_activity(request, code):
     for reward in rewards:
         progress_for_task = progress_by_task.get(reward.task_id, {})
         grants_for_reward = grants_by_reward.get(reward.id, {})
-        profile_ids = set(progress_for_task) | set(grants_for_reward)
+        profile_ids = profile_ids_by_task.get(reward.task_id, set())
         customers = []
         ready_count = redeemed_count = issued_count = in_progress_count = 0
         for profile_id in profile_ids:
@@ -93,7 +108,7 @@ def reward_activity(request, code):
             issued = len(grants)
             current = progress.current_value if progress else 0
             completed = progress.completed_count if progress else 0
-            profile = (progress.profile if progress else grants[0].profile)
+            profile = profiles_by_id[profile_id]
             user = profile.user
             activity_at = last_activity.get((reward.task_id, profile_id))
             if not activity_at and grants:
